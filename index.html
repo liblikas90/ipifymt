@@ -46,7 +46,7 @@
       box-shadow: 3px 3px 0 #aaa;
     }
 
-    textarea {
+    textarea, input[type="text"] {
       width: 100%;
       font-family: 'Patrick Hand', cursive;
       font-size: 1.1rem;
@@ -55,6 +55,9 @@
       border-radius: 8px;
       background-color: #fff;
       resize: vertical;
+    }
+
+    textarea {
       min-height: 100px;
     }
 
@@ -122,6 +125,11 @@
     #copyFeedback.visible {
       opacity: 1;
     }
+
+    #feedbackStatus {
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+    }
   </style>
 </head>
 <body>
@@ -141,6 +149,16 @@
       <span id="copyFeedback">✅ Copied!</span>
     </div>
 
+    <!-- Feedback Panel (now before the log) -->
+    <div class="panel">
+      <label for="feedbackName">Your Name</label>
+      <input type="text" id="feedbackName" placeholder="Name (optional)" />
+      <label for="feedbackInput">Give Feedback on the Translation</label>
+      <textarea id="feedbackInput" placeholder="Was the translation accurate or helpful?"></textarea>
+      <button id="submitFeedback">Submit Feedback</button>
+      <div id="feedbackStatus"></div>
+    </div>
+
     <div class="panel">
       <label>Request Log</label>
       <div class="log" id="requestLog">No request made yet.</div>
@@ -156,6 +174,10 @@
       const spinner = document.getElementById('spinner');
       const copyButton = document.getElementById('copyButton');
       const copyFeedback = document.getElementById('copyFeedback');
+      const feedbackInput = document.getElementById('feedbackInput');
+      const feedbackButton = document.getElementById('submitFeedback');
+      const feedbackStatus = document.getElementById('feedbackStatus');
+      const feedbackName = document.getElementById('feedbackName');
 
       button.addEventListener("click", async function () {
         const text = input.value.trim();
@@ -216,6 +238,44 @@
           setTimeout(() => copyFeedback.classList.remove('visible'), 1500);
         } catch (err) {
           alert('Failed to copy text: ' + err.message);
+        }
+      });
+
+      feedbackButton.addEventListener('click', async function () {
+        const sourceText = input.value.trim();
+        const translatedText = output.innerText.trim();
+        const feedback = feedbackInput.value.trim();
+        const name = feedbackName.value.trim();
+
+        if (!sourceText || !translatedText || translatedText === '—' || !feedback) {
+          feedbackStatus.textContent = '❗ Please complete the translation and enter feedback.';
+          feedbackStatus.style.color = 'red';
+          return;
+        }
+
+        try {
+          feedbackStatus.textContent = 'Sending feedback...';
+          feedbackStatus.style.color = '#555';
+
+          await fetch('https://script.google.com/macros/s/AKfycbxkIp9BzXtgSJKtT0pHV4G8uvz4-pNYycwn_l-oKXhx29Hi_chFWnViXq3gPQcykLqJ/exec', {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              source: sourceText,
+              translation: translatedText,
+              feedback: feedback,
+              name: name
+            })
+          });
+
+          feedbackInput.value = '';
+          feedbackName.value = '';
+          feedbackStatus.textContent = '✅ Feedback submitted!';
+          feedbackStatus.style.color = 'green';
+        } catch (error) {
+          feedbackStatus.textContent = '❌ Failed to submit feedback.';
+          feedbackStatus.style.color = 'red';
         }
       });
     });
